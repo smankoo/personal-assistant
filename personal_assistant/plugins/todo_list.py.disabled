@@ -1,0 +1,60 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+TODO_FILE_PATH = os.getenv("TODO_FILE_PATH")
+
+if TODO_FILE_PATH is None:
+    raise ValueError("TODO_FILE_PATH environment variable is not set.")
+if not os.path.exists(TODO_FILE_PATH):
+    raise FileNotFoundError(f"File not found: {TODO_FILE_PATH}")
+
+
+def get_obsidian_todo():
+    with open(TODO_FILE_PATH, "r") as file:
+        content = file.read().strip()
+        return content
+
+
+def read_local_todo_file():
+    """Read and return the to-do list from a local text file."""
+    with open("todo_list.txt", "r") as file:
+        content = file.read().strip()
+        return content
+
+
+def get_todo_text():
+    todo_text = ""
+    try:
+        todo_text = get_obsidian_todo()
+    except FileNotFoundError:
+        try:
+            todo_text = read_local_todo_file()
+        except FileNotFoundError:
+            todo_text = "No to-do list found."
+        except Exception as e:
+            todo_text = f"Error reading to-do list: {str(e)}"
+    finally:
+        if not todo_text:
+            todo_text = "No to-do list found."
+
+        return todo_text
+
+
+def get_output():
+    todo_text = get_todo_text()
+    try:
+        if not todo_text:
+            todo_text = "No tasks provided."
+        return {
+            "plugin_name": "To-Do List",
+            "output": f"### Actionable Info ###\n\n{todo_text}",
+        }
+    except Exception as e:
+        return {"plugin_name": "To-Do List", "output": f"Error: {e}"}
+
+
+if __name__ == "__main__":
+    output = get_output()
+    print(output["output"])

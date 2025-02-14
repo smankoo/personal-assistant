@@ -1,0 +1,26 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+STATIC_CONTEXT_FILE_PATH = os.getenv("STATIC_CONTEXT_FILE_PATH")
+
+if not STATIC_CONTEXT_FILE_PATH:
+    raise ValueError("STATIC_CONTEXT_FILE_PATH environment variable not set")
+if not os.path.exists(STATIC_CONTEXT_FILE_PATH):
+    raise ValueError(f"File {STATIC_CONTEXT_FILE_PATH} does not exist")
+
+
+def get_output():
+    """Read and return the static context from a Markdown file."""
+    try:
+        with open(STATIC_CONTEXT_FILE_PATH, "r") as file:
+            content = file.read()
+        return {"plugin_name": "Static Context", "output": content}
+    except Exception as e:
+        return {"plugin_name": "Static Context", "output": f"Error: {e}"}
+
+
+if __name__ == "__main__":
+    output = get_output()
+    print(output["output"])

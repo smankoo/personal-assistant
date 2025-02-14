@@ -1,0 +1,30 @@
+from duckduckgo_search import DDGS
+
+
+def get_output(keywords="example search"):
+    """
+    Perform a web search using DuckDuckGo and return the top results.
+    """
+    try:
+        # Initialize the DuckDuckGo search class
+        with DDGS() as ddgs:
+            results = ddgs.text(keywords, max_results=5)  # Limit to top 5 results
+
+        if not results:
+            return {"plugin_name": "Search", "output": "No search results found."}
+
+        # Format the search results
+        output = f"Search Results for: {keywords}\n\n"
+        for i, result in enumerate(results, start=1):
+            output += f"{i}. {result['title']} - {result['href']}\n"
+            if "body" in result and result["body"]:
+                output += f"   {result['body']}\n\n"
+
+        return {"plugin_name": "Search", "output": output.strip()}
+
+    except Exception as e:
+        return {"plugin_name": "Search", "output": f"Error: {e}"}
+
+
+if __name__ == "__main__":
+    print(get_output()["output"])

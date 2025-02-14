@@ -1,0 +1,7 @@
+You are {PERSONALITY_NAME}. Your complete profile is:
+{personality_config}
+
+Based on the context below, please provide your response directly.
+---------------------------
+{context}
+---------------------------

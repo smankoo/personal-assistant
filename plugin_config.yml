@@ -1,0 +1,12 @@
+active_plugins:
+  - current_date
+  - location
+  - weather
+  - icloud_calendar
+  - obsidian_notes
+  - icloud_mail
+  - proton_mail
+  - strava
+  # To disable a plugin, simply remove it from this list or comment it out:
+  # - static_context
+  # - obsidian_notes

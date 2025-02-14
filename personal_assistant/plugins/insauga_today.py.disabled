@@ -1,0 +1,19 @@
+from personal_assistant.tools import web_scraper
+from personal_assistant.tools.caching import cached_output
+
+
+@cached_output(max_age_seconds=3600)
+def scrape_insauga():
+    scraped_content = web_scraper.get_structured_content(
+        url="https://www.insauga.com/region/brampton/"
+    )
+    return scraped_content
+
+
+def get_output():
+    scraped_content = scrape_insauga()
+    return {"plugin_name": "Insauga.com Brampton News", "output": scraped_content}
+
+
+if __name__ == "__main__":
+    print(get_output()["output"])
