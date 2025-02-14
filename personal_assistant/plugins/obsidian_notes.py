@@ -3,7 +3,9 @@ import yaml
 from personal_assistant.tools.caching import cached_output
 
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH", "")
 
