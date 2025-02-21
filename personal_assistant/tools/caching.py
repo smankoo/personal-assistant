@@ -26,6 +26,7 @@ def set_cache(data):
     """Store data in the cache with metadata."""
     caller_filename = get_caller_filename()
     cache_file = os.path.join(CACHE_DIR, f"{caller_filename}.cache.txt")
+    print(f"[DEBUG] Caching data to {cache_file}")
 
     timestamp = datetime.now().isoformat()
     with open(cache_file, "w") as f:
@@ -39,6 +40,7 @@ def get_cache(max_age_seconds):
     """Retrieve cached data if it's still valid."""
     caller_filename = get_caller_filename()
     cache_file = os.path.join(CACHE_DIR, f"{caller_filename}.cache.txt")
+    print(f"[DEBUG] Retrieving cached data from {cache_file}")
 
     if not os.path.exists(cache_file):
         return None  # Cache doesn't exist

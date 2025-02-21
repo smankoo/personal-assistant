@@ -141,7 +141,7 @@ def main():
 
     # Use pathlib throughout.
     base_dir = Path(__file__).parent.resolve()
-    templates_dir = base_dir / "prompt_templates"
+    templates_dir = base_dir / "personal_assistant" / "prompt_templates"
     if not templates_dir.exists():
         print(f"Templates directory not found: {templates_dir}", file=sys.stderr)
         return

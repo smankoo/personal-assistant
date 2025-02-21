@@ -34,7 +34,7 @@
 # --- Set default values ---
 PERSONALITY="Sheela"
 MODE="ask"
-PERSONALITIES_FILE="personalities.yml"
+PERSONALITIES_FILE="personal_assistant/personalities.yml"
 CONTEXT_FILE="personal_assistant/.plugins_output/0_all.output.txt"
 TEMPLATE_FILE=""
 RAW_MODE=false
