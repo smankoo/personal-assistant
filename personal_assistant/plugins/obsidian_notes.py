@@ -1,6 +1,7 @@
 import os
 import yaml
 from personal_assistant.tools.caching import cached_output
+from personal_assistant.tools.diary_to_xml import DiaryConverter
 
 import os
 from dotenv import load_dotenv
@@ -48,7 +49,12 @@ def fetch_ai_context_enabled_notes():
                         all_notes_content += (
                             f"# File: .{file_path.removeprefix(OBSIDIAN_VAULT_PATH)}\n"
                         )
-                        all_notes_content += content
+
+                        if file == "Day Log.md":
+                            all_notes_content += DiaryConverter(content).convert()
+                        else:
+                            all_notes_content += content
+
                         all_notes_content += "\n" + "=" * 30 + "\n"
 
     return all_notes_content or "No AI-context-enabled notes found."
