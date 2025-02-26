@@ -21,16 +21,6 @@
 #           [--personalities_file <file>] [--context_file <file>]
 #           [--template_file <file>] [--raw|-r] [--list|-l]
 #
-# Options:
-#   --personality, -p    (optional): The personality name defined in personalities.yml.
-#                            Defaults to "Sheela".
-#   --mode               (optional): Prompt mode; defaults to "ask". Valid options: ask, direct.
-#   --personalities_file (optional): Defaults to "personalities.yml".
-#   --context_file       (optional): Defaults to "personal_assistant/.plugins_output/0_all.output.txt".
-#   --template_file      (optional): Provide an alternate prompt template file.
-#   --raw, -r           (optional): Copy only the raw plugin context.
-#   --list, -l          (optional): List available personalities (with role and task) and exit.
-
 # --- Set default values ---
 PERSONALITY="Sheela"
 MODE="ask"
@@ -81,60 +71,57 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# --- List Mode: Display available personalities in a pretty table and exit ---
-if [ "$LIST_MODE" = true ]; then
-  if [ ! -f "$PERSONALITIES_FILE" ]; then
-    echo "[ERROR] Personalities file not found: $PERSONALITIES_FILE"
-    exit 1
-  fi
-  echo "[INFO] Available Personalities:"
-  python3 personality_helper.py list --file "$PERSONALITIES_FILE"
-  exit 0
-fi
-
-# --- Pre-checks before running plugins ---
-
-# 1. Check that the personalities file exists.
+# --- Check that the personalities file exists ---
 if [ ! -f "$PERSONALITIES_FILE" ]; then
   echo "[ERROR] Personalities file not found: $PERSONALITIES_FILE"
   exit 1
 fi
 
-# 2. Check that the specified personality exists (case-insensitive).
-python3 personality_helper.py check --personality "$PERSONALITY" --file "$PERSONALITIES_FILE"
-if [ $? -ne 0 ]; then
-  echo "[ERROR] Please check the personality name and try again."
-  exit 1
-fi
-
-# 3. Check that compile_prompt.py exists.
-if [ ! -f "compile_prompt.py" ]; then
-  echo "[ERROR] compile_prompt.py not found in the current directory."
-  exit 1
-fi
-
-# 4. Check that personal_assistant/main.py exists.
-if [ ! -f "personal_assistant/main.py" ]; then
-  echo "[ERROR] personal_assistant/main.py not found."
-  exit 1
-fi
-
-# 5. If a template file is specified, check that it exists.
-if [ -n "$TEMPLATE_FILE" ] && [ ! -f "$TEMPLATE_FILE" ]; then
-  echo "[ERROR] Specified template file not found: $TEMPLATE_FILE"
-  exit 1
-fi
-
-# 6. Check that the virtual environment exists.
+# --- Check that the virtual environment exists and activate it ---
 VENV_DIR=".venv"
 if [ ! -d "$VENV_DIR" ]; then
   echo "[ERROR] Virtual environment not found at $VENV_DIR"
   exit 1
 fi
 
-# --- Activate the virtual environment ---
+# Activate the virtual environment
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
+
+# --- List Mode: Display available personalities in a pretty table and exit ---
+if [ "$LIST_MODE" = true ]; then
+  echo "[INFO] Available Personalities:"
+  python3 personality_helper.py list --file "$PERSONALITIES_FILE"
+  deactivate
+  exit 0
+fi
+
+# --- Check that the specified personality exists (case-insensitive) ---
+python3 personality_helper.py check --personality "$PERSONALITY" --file "$PERSONALITIES_FILE"
+if [ $? -ne 0 ]; then
+  echo "[ERROR] Please check the personality name and try again."
+  deactivate
+  exit 1
+fi
+
+# --- Pre-checks for required files ---
+if [ ! -f "compile_prompt.py" ]; then
+  echo "[ERROR] compile_prompt.py not found in the current directory."
+  deactivate
+  exit 1
+fi
+
+if [ ! -f "personal_assistant/main.py" ]; then
+  echo "[ERROR] personal_assistant/main.py not found."
+  deactivate
+  exit 1
+fi
+
+if [ -n "$TEMPLATE_FILE" ] && [ ! -f "$TEMPLATE_FILE" ]; then
+  echo "[ERROR] Specified template file not found: $TEMPLATE_FILE"
+  deactivate
+  exit 1
+fi
 
 # --- Run plugins to generate context ---
 echo "[INFO] Running plugins..."
