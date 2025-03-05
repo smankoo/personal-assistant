@@ -1,17 +1,29 @@
-# File: personal_assistant/tools/diary_summarizer.py
-
 import os
 import sys
 import datetime
 from personal_assistant.tools.diary_to_xml import DiaryConverter
 from personal_assistant.llm_clients.openai_client import OpenAIClient
 
-# Define the base folder for storing summaries (using OBSIDIAN_VAULT_PATH)
-# If not set, defaults to the current directory.
-DAY_LOG_PATH = "/Users/sumeet/Library/Mobile Documents/iCloud~md~obsidian/Documents/Sumeet Personal Notes/2 Areas/Day Log.md"
+# Get the vault path from the environment.
+OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH")
+if not OBSIDIAN_VAULT_PATH:
+    raise ValueError("OBSIDIAN_VAULT_PATH environment variable not set.")
+
+# Locate "Day Log.md" in the vault if not explicitly set.
+DAY_LOG_PATH = os.getenv("DAY_LOG_PATH")
+if not DAY_LOG_PATH:
+    for root, dirs, files in os.walk(OBSIDIAN_VAULT_PATH):
+        if "Day Log.md" in files:
+            DAY_LOG_PATH = os.path.join(root, "Day Log.md")
+            break
+if not DAY_LOG_PATH:
+    raise ValueError("Day Log.md not found in the vault.")
+
+# Set the summaries folder relative to where Day Log.md is found.
 SUMMARY_BASE_DIR = os.path.join(os.path.dirname(DAY_LOG_PATH), "Day Log Summaries")
 WEEKLY_SUMMARY_DIR = os.path.join(SUMMARY_BASE_DIR, "Weekly Summaries")
 MONTHLY_SUMMARY_DIR = os.path.join(SUMMARY_BASE_DIR, "Monthly Summaries")
+
 DEBUG_MODE = os.getenv("DEBUG_GENAI", "false").lower() in ["true", "1"]
 FORCE_REFRESH = os.getenv("FORCE_REFRESH", "true").lower() in ["true", "1"] or any(
     arg.lower() in ["refresh", "force"] for arg in sys.argv
@@ -74,7 +86,8 @@ def summarize_day_log(markdown_text: str) -> str:
     Returns a markdown-formatted summary.
     """
     converter = DiaryConverter(markdown_text)
-    days = converter.parse()  # List of tuples: (day_date, entries)
+    # Each element in days is a tuple: ((parsed_day, original_header), entries)
+    days = converter.parse()
 
     today = datetime.date.today()
     current_week = today.isocalendar()[1]
@@ -83,28 +96,24 @@ def summarize_day_log(markdown_text: str) -> str:
     weekly_groups = {}  # key: (year, week)
     monthly_groups = {}  # key: (year, month)
 
-    for day_date, entries in days:
-        if hasattr(day_date, "date"):
-            day_as_date = day_date.date()
-        else:
-            day_as_date = day_date
-
-        day_md = f"## {day_as_date.strftime('%Y-%m-%d (%A)')}\n"
+    for day_info, entries in days:
+        parsed_day, original_header = day_info  # Unpack the tuple
+        day_md = f"## {original_header}\n"
         for time_str, entry_text in entries:
             day_md += f"- **{time_str}** {entry_text}\n"
 
         if (
-            day_as_date.year == today.year
-            and day_as_date.isocalendar()[1] == current_week
+            parsed_day.year == today.year
+            and parsed_day.isocalendar()[1] == current_week
         ):
             current_week_entries.append(day_md)
         else:
-            delta_days = (today - day_as_date).days
+            delta_days = (today - parsed_day.date()).days
             if delta_days <= 30:
-                key = (day_as_date.year, day_as_date.isocalendar()[1])
+                key = (parsed_day.year, parsed_day.isocalendar()[1])
                 weekly_groups.setdefault(key, []).append(day_md)
             else:
-                key = (day_as_date.year, day_as_date.month)
+                key = (parsed_day.year, parsed_day.month)
                 monthly_groups.setdefault(key, []).append(day_md)
 
     summarized_weekly = []
