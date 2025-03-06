@@ -12,7 +12,7 @@ load_dotenv()
 OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH", "")
 
 
-def parse_front_matter(content):
+def parse_front_matter(content: str):
     """Extract and parse YAML front matter from Markdown content."""
     if content.startswith("---"):
         parts = content.split("---", 2)
@@ -25,15 +25,28 @@ def parse_front_matter(content):
     return None
 
 
+def is_ai_context_enabled(front_matter: dict) -> bool:
+    """
+    Determine if a note has 'ai-context-enabled' set to a truthy value.
+    Accepts booleans or strings (e.g. "true", "True", etc.).
+    """
+    value = front_matter.get("ai-context-enabled")
+    if isinstance(value, bool):
+        return value
+    elif isinstance(value, str):
+        return value.lower() == "true"
+    elif isinstance(value, (int, float)):
+        return value == 1
+    return False
+
+
 def simple_summary_to_xml(summary_text: str, metadata: dict) -> str:
     """
     Wrap the summary file content in a <summary> element.
     Metadata (such as filename and date info) is added as attributes.
     A CDATA section is used so that the content is preserved exactly.
     """
-    # Build attributes string from metadata
     attributes = " ".join(f'{k}="{v}"' for k, v in metadata.items())
-    # Wrap the summary text in CDATA
     return f"<summary {attributes}><![CDATA[{summary_text}]]></summary>"
 
 
@@ -53,12 +66,11 @@ def process_current_week(day_log_path: str) -> str:
     current_week = today.isocalendar()[1]
 
     for day_info, entries in days:
-        parsed_day, original_header = day_info  # Unpack the tuple
+        parsed_day, original_header = day_info
         if (
             parsed_day.year == today.year
             and parsed_day.isocalendar()[1] == current_week
         ):
-            # Use the original header to preserve the format.
             day_md = f"## {original_header}\n"
             for time_str, entry_text in entries:
                 day_md += f"- **{time_str}** {entry_text}\n"
@@ -66,7 +78,6 @@ def process_current_week(day_log_path: str) -> str:
 
     if current_week_entries:
         current_week_markdown = "\n".join(current_week_entries)
-        # Convert the filtered markdown back to XML.
         return DiaryConverter(current_week_markdown).convert()
     return ""
 
@@ -75,9 +86,6 @@ def process_summaries(summary_dir: str, summary_type: str) -> str:
     """
     Read all markdown files in the given summary directory,
     and wrap each file's raw content in a <summary> element with metadata.
-
-    For weekly summaries, filenames are expected to be like "2025-W02.md".
-    For monthly summaries, filenames are expected to be like "2025-02.md".
     """
     xml_parts = []
     if os.path.isdir(summary_dir):
@@ -86,10 +94,8 @@ def process_summaries(summary_dir: str, summary_type: str) -> str:
                 summary_path = os.path.join(summary_dir, file)
                 with open(summary_path, "r", encoding="utf-8") as f:
                     summary_text = f.read()
-                # Build metadata from filename
                 metadata = {"filename": file, "summary_type": summary_type}
                 if summary_type == "weekly":
-                    # Expect format like "YYYY-W02.md"
                     try:
                         parts = file.split("-")
                         year = parts[0]
@@ -99,7 +105,6 @@ def process_summaries(summary_dir: str, summary_type: str) -> str:
                     except Exception:
                         pass
                 elif summary_type == "monthly":
-                    # Expect format like "YYYY-02.md"
                     try:
                         parts = file.split("-")
                         year = parts[0]
@@ -113,8 +118,41 @@ def process_summaries(summary_dir: str, summary_type: str) -> str:
     return "\n".join(xml_parts)
 
 
+def process_plain_notes(vault_path: str) -> str:
+    """
+    Recursively scan the vault for Markdown files (excluding Day Log.md and
+    files within the 'Day Log Summaries' directory). For each file that has
+    front matter with 'ai-context-enabled' set to a truthy value, include the note
+    as plain text with a header indicating the file path.
+    Each note is wrapped in a <note> element with an attribute for the file path.
+    """
+    plain_notes = []
+    for root, dirs, files in os.walk(vault_path):
+        # Exclude the summaries directory from being scanned.
+        if "Day Log Summaries" in dirs:
+            dirs.remove("Day Log Summaries")
+        for file in files:
+            if file.endswith(".md"):
+                # Skip the Day Log file
+                if file == "Day Log.md":
+                    continue
+                file_path = os.path.join(root, file)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                front_matter = parse_front_matter(content)
+                if front_matter and is_ai_context_enabled(front_matter):
+                    # Prepend the file path as a header to the note content.
+                    note_content = f"File: {file_path}\n\n{content}"
+                    # Wrap this note in a <note> element with a file attribute.
+                    note_xml = (
+                        f'<note file="{file_path}"><![CDATA[{note_content}]]></note>'
+                    )
+                    plain_notes.append(note_xml)
+    return "\n".join(plain_notes)
+
+
 def get_output():
-    # Build a combined XML document with three sections.
+    # Build a combined XML document with sections for current week, summaries, and plain notes.
     root = ET.Element("journal")
 
     # Determine the path to the Day Log.md file.
@@ -158,7 +196,6 @@ def get_output():
     # Insert weekly summaries XML.
     weekly_elem = ET.SubElement(root, "weekly_summaries")
     if weekly_xml_str:
-        # Wrap the weekly summaries as multiple <summary> elements.
         try:
             dummy = f"<container>{weekly_xml_str}</container>"
             container_elem = ET.fromstring(dummy)
@@ -181,6 +218,20 @@ def get_output():
             monthly_elem.text = monthly_xml_str
     else:
         monthly_elem.text = "No monthly summaries found."
+
+    # Process and insert plain notes (notes with ai-context-enabled enabled).
+    plain_notes_xml_str = process_plain_notes(OBSIDIAN_VAULT_PATH)
+    plain_notes_elem = ET.SubElement(root, "plain_notes")
+    if plain_notes_xml_str:
+        try:
+            dummy = f"<container>{plain_notes_xml_str}</container>"
+            container_elem = ET.fromstring(dummy)
+            for child in container_elem:
+                plain_notes_elem.append(child)
+        except Exception:
+            plain_notes_elem.text = plain_notes_xml_str
+    else:
+        plain_notes_elem.text = "No plain notes found."
 
     # Pretty-print the combined XML.
     rough_string = ET.tostring(root, "utf-8")
