@@ -158,6 +158,12 @@ if [ "$RAW_MODE" = true ]; then
   exit 0
 fi
 
+# run AI Observations
+
+echo "[INFO] Running AI Observations..."
+python3 ai_observer.py "$CONTEXT_FILE"
+
+
 # Define where to save the compiled prompt.
 OUTPUT_FILE="personal_assistant/.plugins_output/compiled_prompt.txt"
 
