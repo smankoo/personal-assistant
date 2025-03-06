@@ -26,6 +26,7 @@ However, if there's is a one-off, such as the user ate bananas or something, tha
 Not all observations need to be based on repeat occurrences, for example, if the user mentions a chronic disease they are managing, or any other health condition, or a permanent change of any sort in their lives (moving houses, childbirth, etc), those would also be good observations.
 You may also have to infer observations, such as, if the user says they ate paratha, then they say they had chai, then at some point they say they had butter chicken, then the user eats Indian food.
 Also, address the user by name, not 'The user'.
+You don't have to limit observations to the above definitions, anything the would be worth remembering, that would be useful to know while giving advice to this user can be an observation.
 Also, only make observations that are not already known. If there are no new observations, it is completely ok to return a blank xml tag <observations></observations>
 Output Template:
 <observations>
