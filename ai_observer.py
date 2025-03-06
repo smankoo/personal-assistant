@@ -18,32 +18,45 @@ def get_observation(user_data: str, known_observations: str) -> str:
     """
     client = OpenAIClient()
     template = """
-You are a helpful assistant that observes and records patterns and any other useful information about the user.
-The user's data is provided below. Please observe and record patterns and any other useful information about the user.
-Only output useful observations and those that you are confident about.
-For example, if you notice a repeat pattern of the user waking up at a certain time, then it is useful to note that the user typically wakes up at that time.
-However, if there's is a one-off, such as the user ate bananas or something, that is not useful. On the other hand, if the user eats bananas every single day, then that is a confident observation.
-Not all observations need to be based on repeat occurrences, for example, if the user mentions a chronic disease they are managing, or any other health condition, or a permanent change of any sort in their lives (moving houses, childbirth, etc), those would also be good observations.
-You may also have to infer observations, such as, if the user says they ate paratha, then they say they had chai, then at some point they say they had butter chicken, then the user eats Indian food.
-Also, address the user by name, not 'The user'.
-You don't have to limit observations to the above definitions, anything the would be worth remembering, that would be useful to know while giving advice to this user can be an observation.
-Also, only make observations that are not already known. If there are no new observations, it is completely ok to return a blank xml tag <observations></observations>
-Output Template:
-<observations>
-- [observations go here...] (each observation should be a bullet point in markdown format)
-</observations>
+You are a helpful assistant that identifies new, meaningful, and practically useful patterns or insights about the user from the provided data.
 
-Here is the input data:
+You will receive:
+1. User's latest input data (`<input_data>`).
+2. Previously known observations (`<known_observations>`).
+
+**Rules to Follow:**
+- Only generate observations that are genuinely new and not explicitly or implicitly covered by existing known observations.
+- Do NOT rephrase or slightly modify known observations; this is NOT useful.
+- Observations must have clear, practical value for future reference or decision-making. Avoid trivial, mundane, or one-off occurrences.
+- If no genuinely new or valuable insights can be confidently identified, explicitly return an empty observations tag: `<new_observations></new_observations>`.
+- Refer to the user by name, if known, not 'the user'.
+
+**Criteria for useful observations:**
+- Recurring actions not previously identified.
+- Important changes in behavior or routines.
+- Notable trends in user habits, preferences, or decision-making.
+- Information that significantly impacts health, scheduling, finances, or family logistics and has not been recorded before.
+- Highly specific details that substantially enhance understanding beyond prior general observations.
+
+Use the following output structure exactly:
+
+<new_observations>
+- [Each distinct, meaningful, and specific observation as a markdown-formatted bullet]
+</new_observations>
+
+Input data:
 <input_data>
 {user_data}
 </input_data>
 
-Here are observations already known about the user:
+Already known observations (do NOT repeat or rephrase these):
 <known_observations>
 {known_observations}
 </known_observations>
 """
     prompt = template.format(user_data=user_data, known_observations=known_observations)
+    # print(f"---Known Observations---\n{known_observations}")
+
     observation_stream = client.stream_response(prompt)
 
     # compile all output stream into a single string
@@ -88,10 +101,11 @@ def get_and_save_observations(user_data):
             known_observations = f.read()
 
     new_observation_xml = get_observation(user_data, known_observations)
+    # print(f"---New Observations---\n{new_observation_xml}")
 
     new_observation = (
-        new_observation_xml.replace("<observations>", "")
-        .replace("</observations>", "")
+        new_observation_xml.replace("<new_observations>", "")
+        .replace("</new_observations>", "")
         .strip()
     )
 
