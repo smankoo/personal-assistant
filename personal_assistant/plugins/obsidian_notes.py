@@ -5,6 +5,9 @@ import xml.dom.minidom
 from datetime import date
 from personal_assistant.tools.caching import cached_output
 from personal_assistant.tools.diary_to_xml import DiaryConverter
+
+# Import the GenAI summarization function that creates summary files
+from personal_assistant.tools.diary_summarizer import summarize_day_log
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -152,7 +155,7 @@ def process_plain_notes(vault_path: str) -> str:
 
 
 def get_output():
-    # Build a combined XML document with sections for current week, summaries, and plain notes.
+    # Build a combined XML document with sections for current week, summaries, plain notes, and AI-generated summary.
     root = ET.Element("journal")
 
     # Determine the path to the Day Log.md file.
@@ -163,24 +166,17 @@ def get_output():
                 day_log_path = os.path.join(r, "Day Log.md")
                 break
 
-    # Process current week raw entries.
+    # Process current week entries.
     if day_log_path and os.path.exists(day_log_path):
         current_week_xml_str = process_current_week(day_log_path)
+        # --- NEW: Generate weekly and monthly summary files if they don't exist ---
+        with open(day_log_path, "r", encoding="utf-8") as f:
+            day_log_text = f.read()
+        # Calling summarize_day_log() will process the day log entries,
+        # generate summary files (if missing), and write them to the vault.
+        _ = summarize_day_log(day_log_text)
     else:
         current_week_xml_str = ""
-
-    # Derive summary directories from the Day Log.md location.
-    if day_log_path:
-        summary_base_dir = os.path.join(
-            os.path.dirname(day_log_path), "Day Log Summaries"
-        )
-    else:
-        summary_base_dir = os.path.join(OBSIDIAN_VAULT_PATH, "Day Log Summaries")
-    weekly_summary_dir = os.path.join(summary_base_dir, "Weekly Summaries")
-    monthly_summary_dir = os.path.join(summary_base_dir, "Monthly Summaries")
-
-    weekly_xml_str = process_summaries(weekly_summary_dir, "weekly")
-    monthly_xml_str = process_summaries(monthly_summary_dir, "monthly")
 
     # Insert current week XML.
     current_elem = ET.SubElement(root, "current_week")
@@ -192,6 +188,20 @@ def get_output():
             current_elem.text = current_week_xml_str
     else:
         current_elem.text = "No current week entries found."
+
+    # Derive summary directories from the Day Log.md location.
+    if day_log_path:
+        summary_base_dir = os.path.join(
+            os.path.dirname(day_log_path), "Day Log Summaries"
+        )
+    else:
+        summary_base_dir = os.path.join(OBSIDIAN_VAULT_PATH, "Day Log Summaries")
+    weekly_summary_dir = os.path.join(summary_base_dir, "Weekly Summaries")
+    monthly_summary_dir = os.path.join(summary_base_dir, "Monthly Summaries")
+
+    # Read and XML-ize the summary files.
+    weekly_xml_str = process_summaries(weekly_summary_dir, "weekly")
+    monthly_xml_str = process_summaries(monthly_summary_dir, "monthly")
 
     # Insert weekly summaries XML.
     weekly_elem = ET.SubElement(root, "weekly_summaries")
@@ -219,7 +229,7 @@ def get_output():
     else:
         monthly_elem.text = "No monthly summaries found."
 
-    # Process and insert plain notes (notes with ai-context-enabled enabled).
+    # Process and insert plain notes.
     plain_notes_xml_str = process_plain_notes(OBSIDIAN_VAULT_PATH)
     plain_notes_elem = ET.SubElement(root, "plain_notes")
     if plain_notes_xml_str:
@@ -232,6 +242,16 @@ def get_output():
             plain_notes_elem.text = plain_notes_xml_str
     else:
         plain_notes_elem.text = "No plain notes found."
+
+    # --- Optionally include a full AI summary of the Day Log ---
+    if day_log_path and os.path.exists(day_log_path):
+        with open(day_log_path, "r", encoding="utf-8") as f:
+            day_log_text = f.read()
+        ai_summary_text = summarize_day_log(day_log_text)
+    else:
+        ai_summary_text = "No Day Log available for summarization."
+    summary_elem = ET.SubElement(root, "ai_summary")
+    summary_elem.text = ai_summary_text
 
     # Pretty-print the combined XML.
     rough_string = ET.tostring(root, "utf-8")

@@ -25,7 +25,7 @@ WEEKLY_SUMMARY_DIR = os.path.join(SUMMARY_BASE_DIR, "Weekly Summaries")
 MONTHLY_SUMMARY_DIR = os.path.join(SUMMARY_BASE_DIR, "Monthly Summaries")
 
 DEBUG_MODE = os.getenv("DEBUG_GENAI", "false").lower() in ["true", "1"]
-FORCE_REFRESH = os.getenv("FORCE_REFRESH", "true").lower() in ["true", "1"] or any(
+FORCE_REFRESH = os.getenv("FORCE_REFRESH", "false").lower() in ["true", "1"] or any(
     arg.lower() in ["refresh", "force"] for arg in sys.argv
 )
 # Ensure that summary directories exist
