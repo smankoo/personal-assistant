@@ -4,12 +4,12 @@ from personal_assistant.llm_clients.base_client import LLMClient  # Use absolute
 
 
 class OpenAIClient(LLMClient):
-    def __init__(self):
+    def __init__(self, model_name="gpt-4o"):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY is not set in environment variables.")
         # Default to "gpt-4o-mini" or override with OPENAI_MODEL env variable.
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        self.model = model_name
         self.client = OpenAI(api_key=self.api_key)
 
     def stream_response(self, prompt: str):

@@ -2,6 +2,10 @@
 from personal_assistant.llm_clients.openai_client import OpenAIClient
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH")
 if not OBSIDIAN_VAULT_PATH:
@@ -111,7 +115,7 @@ def get_and_save_observations(user_data):
 
     if new_observation:
         save_observation(new_observation, OBSERVATIONS_FILE_PATH)
-        print(f"Saved observation to {OBSERVATIONS_FILE_PATH}")
+        print(f"Saved observation to '{OBSERVATIONS_FILE_PATH}'")
 
 
 if __name__ == "__main__":
