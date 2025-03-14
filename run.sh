@@ -12,7 +12,7 @@
 #   5. Deactivates the virtual environment.
 #
 # Usage:
-#   ./run.sh [--personality <name>] [--mode ask|direct] [--personalities_file <file>]
+#   ./run.sh [--help|-h] [--personality <name>] [--mode ask|direct] [--personalities_file <file>]
 #            [--context_file <file>] [--template_file <file>] [--raw|-r] [--list|-l] [--ai <provider>]
 
 # Default values
@@ -29,6 +29,22 @@ LLM_PROVIDER=""  # If provided (e.g. "openai" or "awsbedrock"), the prompt will 
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
+    --help|-h)
+      echo "Usage: $0 [--help|-h] [--personality <name>] [--mode ask|direct] [--personalities_file <file>]"
+      echo "          [--context_file <file>] [--template_file <file>] [--raw|-r] [--list|-l] [--ai <provider>]"
+      echo ""
+      echo "Options:"
+      echo "  --help, -h                Show this help message and exit."
+      echo "  --personality, -p <name>    Specify personality. Default: ${PERSONALITY}"
+      echo "  --mode <ask|direct>        Set mode. Default: ${MODE}"
+      echo "  --personalities_file <file> Specify personalities file. Default: ${PERSONALITIES_FILE}"
+      echo "  --context_file <file>      Specify context file. Default: ${CONTEXT_FILE}"
+      echo "  --template_file <file>     Specify template file (optional)."
+      echo "  --raw, -r                Enable raw mode."
+      echo "  --list, -l               Enable list mode."
+      echo "  --ai <provider>          Specify LLM provider (e.g., openai or awsbedrock)."
+      exit 0
+      ;;
     --personality|-p)
       shift
       PERSONALITY="$1"
@@ -159,10 +175,8 @@ if [ "$RAW_MODE" = true ]; then
 fi
 
 # run AI Observations
-
 echo "[INFO] Running AI Observations..."
 python3 ai_observer.py "$CONTEXT_FILE"
-
 
 # Define where to save the compiled prompt.
 OUTPUT_FILE="personal_assistant/.plugins_output/compiled_prompt.txt"
