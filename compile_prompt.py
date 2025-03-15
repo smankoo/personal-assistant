@@ -3,7 +3,7 @@
 compile_prompt.py
 
 This script compiles the full prompt text by:
-  - Loading one of two prompt templates (for "ask" mode or "direct" mode)
+  - Loading a prompt template corresponding to the provided mode (e.g., ask, direct, think, custom, etc.)
   - Loading personality definitions from a YAML file (with unconstrained keys)
   - Processing each personality value to substitute placeholders (e.g. {NAME_OF_USER})
   - Formatting the complete personality configuration into a text block
@@ -23,6 +23,9 @@ import yaml
 
 
 def load_yaml(file_path: Path) -> dict:
+    """
+    Load a YAML file and return its contents as a dictionary.
+    """
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
@@ -48,6 +51,9 @@ def get_full_name() -> str:
 
 
 def load_file(file_path: Path) -> str:
+    """
+    Load and return the content of a file, or raise an error if it does not exist.
+    """
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
     return file_path.read_text(encoding="utf-8")
@@ -55,7 +61,8 @@ def load_file(file_path: Path) -> str:
 
 def process_value(value, subs: dict) -> str:
     """
-    If value is a string, substitute placeholders; if a list, process each element.
+    If value is a string, substitute placeholders using the provided substitutions.
+    If it's a list, process each element and join them with commas.
     """
     if isinstance(value, str):
         return value.format(**subs)
@@ -69,7 +76,7 @@ def process_personality(personality: dict, base_subs: dict) -> dict:
     """
     Process each key in the personality dictionary by substituting placeholders
     using the base substitutions (e.g. {NAME_OF_USER}).
-    Returns a new dictionary.
+    Returns a new dictionary with processed values.
     """
     processed = {}
     for key, value in personality.items():
@@ -101,9 +108,12 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["ask", "direct"],
+        type=str,
         default="ask",
-        help="Prompt mode: 'ask' (first show the query then request a response) or 'direct' (immediately request a response).",
+        help=(
+            "Prompt mode. The script will load the template file <mode>.txt "
+            "from the prompt_templates directory. (e.g., 'ask', 'direct', 'think', 'custom', etc.)"
+        ),
     )
     parser.add_argument(
         "--personality",
@@ -139,7 +149,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Use pathlib throughout.
+    # Resolve directories and required file paths using pathlib.
     base_dir = Path(__file__).parent.resolve()
     templates_dir = base_dir / "personal_assistant" / "prompt_templates"
     if not templates_dir.exists():
@@ -156,22 +166,17 @@ def main():
         print(f"Context file not found: {context_file}", file=sys.stderr)
         return
 
-    if args.mode not in ["ask", "direct"]:
-        print(f"Invalid mode: {args.mode}", file=sys.stderr)
-        return
-
-    # Select template based on mode (unless overridden by --template_file)
+    # Determine the template file path based on the mode or via an override.
     if args.template_file:
         template_path = Path(args.template_file)
-    elif args.mode == "ask":
-        template_path = templates_dir / "ask.txt"
-        if not template_path.exists():
-            print(f"Template file not found: {template_path}", file=sys.stderr)
-            return
     else:
-        template_path = templates_dir / "direct.txt"
+        # The mode name directly maps to a template file in the prompt_templates directory.
+        template_path = templates_dir / f"{args.mode}.txt"
         if not template_path.exists():
-            print(f"Template file not found: {template_path}", file=sys.stderr)
+            print(
+                f"Template file for mode '{args.mode}' not found: {template_path}",
+                file=sys.stderr,
+            )
             return
 
     try:
@@ -186,10 +191,10 @@ def main():
         print(e, file=sys.stderr)
         return
 
-    # Base substitutions (e.g. the user's name)
+    # Base substitutions (for example, the user's name).
     base_subs = {"NAME_OF_USER": get_full_name()}
 
-    # Load personalities
+    # Load personalities from YAML.
     try:
         personalities_data = load_yaml(personalities_file)
     except Exception as e:
@@ -197,7 +202,7 @@ def main():
         return
 
     personalities = personalities_data.get("personalities", [])
-    # -- Case-insensitive personality matching --
+    # Perform case-insensitive matching to select the personality.
     chosen = next(
         (
             p
@@ -213,14 +218,14 @@ def main():
         )
         return
 
-    # Process the personality so that placeholders (like {NAME_OF_USER}) are replaced.
+    # Process the personality configuration by replacing placeholders.
     processed_personality = process_personality(chosen, base_subs)
     personality_config_str = format_personality_config(processed_personality)
     personality_name = processed_personality.get("name", "Your assistant")
     personality_role = processed_personality.get("role", "Your assistant")
     personality_task = processed_personality.get("task", "Help")
 
-    # Build full substitutions.
+    # Build the complete set of substitutions.
     full_subs = base_subs.copy()
     full_subs.update(
         {
@@ -230,7 +235,7 @@ def main():
             "PERSONALITY_TASK": personality_task,
         }
     )
-    # Inject the plugin-generated context as {context}
+    # Inject the plugin-generated context as the {context} placeholder.
     full_subs["context"] = context_text
 
     try:
@@ -244,7 +249,7 @@ def main():
         out_path.write_text(compiled_prompt, encoding="utf-8")
         print(f"Compiled prompt written to: {out_path}", file=sys.stderr)
     else:
-        # When used in the end-to-end process, the compiled prompt is sent to stdout.
+        # Print the compiled prompt to stdout.
         print(compiled_prompt)
 
 
