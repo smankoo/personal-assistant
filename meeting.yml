@@ -1,0 +1,8 @@
+objective: "Plan the day of tomorrow."
+leader: "Sheela"
+personalities:
+  - "Kartar"
+  - "Rishi"
+  - "Dr. Riya Kapoor"
+  - "Aarav"
+max_rounds: 1
