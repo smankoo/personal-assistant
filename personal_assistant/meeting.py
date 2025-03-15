@@ -183,7 +183,7 @@ def run_meeting():
             f"Respond to the following question regarding the meeting objective:\n\n"
             f"Question: {tailored_question}\n\n"
             f"Meeting Objective: {objective}\n\n"
-            "Please provide a thoughtful, context-aware answer that reflects your expertise."
+            "Please provide a thoughtful, context-aware answer that reflects your expertise, while taking into account the conversation so far."
         )
         participant_response = call_genai(response_prompt)
         transcript.append(f"{pname}'s response: {participant_response}")

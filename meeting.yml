@@ -1,6 +1,12 @@
-objective: "Plan the day of tomorrow."
+objective: "Plan the next seven days for me."
 leader: "Sheela"
 personalities:
-  - "Kartar"
+  - "Rishi"
+  - "Veer"
+  - "Anika"
+  - "Shubhi"
+  - "Lakshmi"
+  - "Aruna"
   - "Sheela"
+
 max_rounds: 1
